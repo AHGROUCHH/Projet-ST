@@ -2,18 +2,17 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split  
 from sklearn.metrics import accuracy_score, classification_report
+from joblib import dump, load  # Importer dump
 import nltk
 from nltk.tokenize import word_tokenize
-import string
-import joblib
-
+import os
 # Télécharger les ressources de nltk
 nltk.download('punkt')
 
 # Charger les données
-data = pd.read_csv('questions_reponses_rh.csv',encoding='ISO-8859-1')
+data = pd.read_csv('questions_reponses_rh.csv', encoding='utf-8')
 
 # Prétraitement des données
 def preprocess_text(text):
@@ -26,21 +25,14 @@ data['Question'] = data['Question'].apply(preprocess_text)
 # Diviser les données en ensembles d'entraînement et de test
 X_train, X_test, y_train, y_test = train_test_split(data['Question'], data['Reponse'], test_size=0.2, random_state=42)
 
-# Créer le pipeline
+# Créer et entraîner le modèle
+tfidf_vectorizer = TfidfVectorizer()
+logistic_regression = LogisticRegression(max_iter=1000)
 pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer()),
-    ('clf', LogisticRegression())
+    ('tfidf', tfidf_vectorizer),
+    ('clf', logistic_regression)
 ])
-
-# Entraîner le modèle
 pipeline.fit(X_train, y_train)
-
-# Enregistrer le modèle
-model_path = 'modele_chatbot.pkl'
-joblib.dump(pipeline, model_path)
-
-# Afficher un message pour confirmer l'enregistrement
-print(f"Le modèle a été enregistré sous le nom '{model_path}'")
 
 # Faire des prédictions
 y_pred = pipeline.predict(X_test)
@@ -49,6 +41,14 @@ y_pred = pipeline.predict(X_test)
 print("Accuracy:", accuracy_score(y_test, y_pred))
 print("Classification Report:")
 print(classification_report(y_test, y_pred))
+
+# Sauvegarde du modèle
+dump(pipeline, 'modele_chatbot.joblib')
+if os.path.exists('modele_chatbot.joblib'):
+
+    print("Le modèle a été sauvegardé avec succès sous le nom 'modele_chatbot.joblib'.")
+else:
+    print("Erreur: Le fichier 'modele_chatbot.joblib' n'a pas été trouvé. La sauvegarde du modèle a échoué.")
 
 # Fonction pour prédire la réponse à une nouvelle question
 def get_response(question):
